@@ -13,6 +13,7 @@ origin = [
     "https://coral-app-l62hg.ondigitalocean.app",
     "https://a1-tips.vercel.app",
     "https://a1-tips.com",
+    "https://www.a1-tips.com",
 ]
 
 app.add_middleware(
