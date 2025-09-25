@@ -3,12 +3,12 @@ from models import User
 
 def send_sms(recipient:list, message:str):
     endPoint = 'https://api.mnotify.com/api/sms/quick'
-    apiKey = 'BnznzOKUz4c6krqXEmtU8N7Jt'
+    apiKey = 'JKYSiTuEvlc3q5XU5HAvEb8Kp'
     url = endPoint + '?key=' + apiKey
 
     data = {
         "recipient": recipient,
-        "sender": "Betgeniuz",
+        "sender": "A1-Tips",
         "message": message,
         "is_schedule": False,
         "schedule_date": "",
@@ -72,4 +72,3 @@ def send_individual_sms(db, phone_number: str, message: str):
     
     response = send_sms([phone_number], message)
     return response
-
