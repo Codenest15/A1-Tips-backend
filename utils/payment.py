@@ -8,6 +8,7 @@ import logging
 from sqlalchemy import func
 import requests
 from datetime import datetime,timedelta
+
 from models import (
     User,
     Purchase,
@@ -155,7 +156,7 @@ async def record_payment_event(email: str, db: Session, booking_id, reference):
 
 async def verify_payment(reference: str, db: Session = Depends(get_db)):
     headers = {
-        "Authorization": "Bearer sk_live_4388ea0e26e5c97ad60dd218a893c02bc84836ad"
+        "Authorization": "Bearer sk_live_abe69c578837a5f641744da6d1f6ed25df915383"
     }
     url = f"https://api.paystack.co/transaction/verify/{reference}"
     response = requests.get(url, headers=headers)
@@ -191,4 +192,3 @@ def number_of_purchases(db:Session):
     count = db.query(func.count(Purchase.id)).scalar()
     
     return count
-
