@@ -91,6 +91,7 @@ def vip_for_today(db: Session):
                     "id": booking.id,
                     "price": booking.price,
                     "booking_code": booking.share_code,  # Include booking code
+                    "updated":booking.updated , # Include booking code
                     "deadline": booking.deadline.isoformat() if booking.deadline else None,  # Include deadline
                 "share_url": booking.share_url,  # Include share URL
                 "games": [serialize_game(game) for game in games],  # Serialize all games
