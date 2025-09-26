@@ -122,7 +122,7 @@ async def record_payment_event(email: str, db: Session, booking_id, reference):
     booking = (
         db.query(Booking)
         .filter(
-            Booking.category == "vip2",
+            Booking.category == booking_id,
             Booking.created_at >= today,
             Booking.created_at < tomorrow
         )
