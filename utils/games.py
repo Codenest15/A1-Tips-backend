@@ -261,7 +261,7 @@ def update_games_statuses(booking_id: int, statuses: dict, db: Session):
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
     games_status_list = statuses.get("games", [])
-    status_map = {item["game_id"]: item["status"] for item in games_status_list}
+    status_map = {item["id"]: item["status"] for item in games_status_list}
     for game in booking.games:
         if game.id in status_map:
             game.match_status = status_map[game.id]
