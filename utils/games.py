@@ -231,6 +231,7 @@ def serialize_game(game):
     if isinstance(game, dict):
         # API data - return all available fields with consistent naming
         return {
+            "id": game.get("id"),
             "home_team": game.get("home"),  # Consistent naming
             "away_team": game.get("away"),  # Consistent naming
             "tournament": game.get("tournament"),
@@ -244,6 +245,7 @@ def serialize_game(game):
     else:
         # Database model objects - return all available fields
         return {
+            "id": getattr(game, 'id', None),
             "home_team": getattr(game, 'home_team', None),
             "away_team": getattr(game, 'away_team', None),
             "tournament": getattr(game, 'tournament', None),
