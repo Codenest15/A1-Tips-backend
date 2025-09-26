@@ -118,6 +118,7 @@ async def record_payment_event(email: str, db: Session, booking_id, reference):
     get_user = db.query(User).filter(User.email == email).first()
     today = datetime.now().date()
     tomorrow = today + timedelta(days=1)
+    booking_id = booking_id.replace(" ", "")
 
     booking = (
         db.query(Booking)
