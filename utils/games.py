@@ -129,6 +129,7 @@ def free_for_today(db: Session):
                 "category": booking.category,
                 "id": booking.id,
                 "booking_code": booking.share_code,
+                "updated":booking.updated , # Include booking code
                 "deadline": booking.deadline.isoformat() if booking.deadline else None,  # Include deadline
                 "share_url": booking.share_url,  # Include share URL
                 "games": [serialize_game(game) for game in games],  # Serialize all games
