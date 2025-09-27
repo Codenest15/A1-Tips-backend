@@ -5,7 +5,7 @@ from Oauth2 import get_current_user, get_admin_user
 from typing import Annotated
 from schemas import BookingResponse
 from datetime import datetime
-from models import Booking, Game  # Make sure to import Game
+from models import Booking, Game,Purchase  # Make sure to import Game
 from database import get_db
 
 router = APIRouter(prefix="/games", tags=["Games"])
@@ -61,3 +61,19 @@ def list_not_updated_bookings(db: Session = Depends(get_db)):
 @router.get("/number-of-vip-bookings-today")
 def number_of_vip_bookings_today(db: Session = Depends(get_db)):
     return games_utils.number_of_vip_bookings_today(db)
+
+@router.delete("/delete-booking/{booking_id}")
+def delete_booking(booking_id: int, db: Session = Depends(get_db)):
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Delete associated games first (due to foreign key constraints)
+    db.query(Game).filter(Game.booking_id == booking_id).delete()
+    db.query(Purchase).filter(Purchase.booking_id == booking_id).delete()
+    
+    # Delete the booking
+    db.delete(booking)
+    db.commit()
+    
+    return {"message": "Booking deleted successfully"}
