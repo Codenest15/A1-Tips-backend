@@ -41,3 +41,7 @@ def all_admins(db: Session = Depends(get_db)):
 @router.get("/user-purchases/{user_email}")
 def user_purchases(user_email: str, db: Session = Depends(get_db)):
     return user_utils.get_users_purchases_for_today(user_email, db)
+
+@router.get("/games-purchases/{user_email}")
+def games_purchases(user_email: str, db: Session = Depends(get_db)):
+    return user_utils.get_user_purchased_games(user_email, db)
