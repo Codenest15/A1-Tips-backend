@@ -123,3 +123,38 @@ def get_users_purchases_for_today(email: str, db: Session):
     # return flags for vip1..vip3
     result = {f"vip{i}": (f"vip{i}" in bought) for i in range(1, 4)}
     return result
+
+def get_user_purchased_games(email: str, db: Session):
+    bookings = (
+        db.query(models.Booking)
+        .join(models.Purchase, models.Booking.id == models.Purchase.booking_id)
+        .join(models.User, models.Purchase.user_id == models.User.id)
+        .filter(models.User.email == email)
+        .all()
+    )
+    result = []
+    for booking in bookings:
+        games = []
+        for game in booking.games:
+            games.append({
+                "home_team": game.home_team,
+                "away_team": game.away_team,
+                "tournament": game.tournament,
+                "sport": game.sport,
+                "odds": game.odds,
+                "prediction": game.prediction,
+                "match_status": game.match_status,
+                "match_day": game.match_day
+            })
+        result.append({
+            "booking_id": booking.id,
+            "share_code": booking.share_code,
+            "share_url": booking.share_url,
+            "deadline": booking.deadline,
+            "category": booking.category,
+            "sold_out": booking.sold_out,
+            "created_at": booking.created_at,
+            "price": booking.price,
+            "games": games
+        })
+    return result
