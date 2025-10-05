@@ -301,3 +301,33 @@ def list_not_updated_bookings(db: Session):
         result.append({"booking_id": booking.id, "price": booking.price,"date":booking.created_at,"category":booking.category,"games": games_info})
 
     return result
+def vip_for_other_days(db: Session, date: datetime):
+    today = date.date()
+    cat_games = []
+    start = datetime(today.year, today.month, today.day)
+    end = start + timedelta(days=1)
+    other_bookings = (
+        db.query(Booking)
+        .filter(
+            Booking.created_at >= start,
+            Booking.created_at < end,
+            Booking.category.ilike("%vip%"),
+        )
+        .all()
+    )
+    for booking in other_bookings:
+        games = db.query(Game).filter(Game.booking_id == booking.id).all()
+        cat_games.append(
+            {
+                "category": booking.category,
+                "id": booking.id,
+                "price": booking.price,
+                "booking_code": booking.share_code,
+                "updated":booking.updated , # Include booking code
+                "deadline": booking.deadline.isoformat() if booking.deadline else None,  # Include deadline
+                "share_url": booking.share_url,  # Include share URL
+                "games": [serialize_game(game) for game in games],  # Serialize all games
+            }
+        )
+
+    return cat_games
