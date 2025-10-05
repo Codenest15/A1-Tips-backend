@@ -61,6 +61,9 @@ def list_not_updated_bookings(db: Session = Depends(get_db)):
 @router.get("/number-of-vip-bookings-today")
 def number_of_vip_bookings_today(db: Session = Depends(get_db)):
     return games_utils.number_of_vip_bookings_today(db)
+@router.get("/vip-history")
+def vip_for_other_days(date: datetime, db: Session = Depends(get_db)):
+    return games_utils.vip_for_other_days(db, date)
 
 @router.delete("/delete-booking/{booking_id}")
 def delete_booking(booking_id: int, db: Session = Depends(get_db)):
