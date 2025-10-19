@@ -12,7 +12,9 @@ origin = [
     "http://localhost:3000",
     "http://localhost:8000",
     "https://coral-app-l62hg.ondigitalocean.app",
-    "https://a1-tips.vercel.app"
+    "https://a1-tips.vercel.app",
+    "https://www.a1-tips.com",
+    "https://a1-tips.com"
 
 ]
 
