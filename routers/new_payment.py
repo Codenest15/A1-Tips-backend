@@ -5,6 +5,7 @@ import os
 import uuid
 from dotenv import load_dotenv
 from utils.new_payment import DepositRequest, create_deposit
+from utils.payment import record_payment_event
 import logging, traceback
 
 # Load environment variables (recommended practice)
@@ -32,3 +33,20 @@ async def create_deposit_endpoint(deposit_data: DepositRequest):  # use Pydantic
             content={"error": str(e)}
         )
 
+@router.post("/api/v1/record-payment-event")
+async def record_payment_event_endpoint(email: str, booking_id: str, reference: str):
+    try:
+        await record_payment_event(email, booking_id, reference)
+        return JSONResponse({"status": "success"})
+    except HTTPException as e:
+        logging.exception("HTTPException in record_payment_event_endpoint")
+        # re-raise HTTPExceptions so FastAPI handles them normally
+        raise e
+    except Exception as e:
+        # log full traceback to server stdout/console
+        logging.exception("Unhandled exception in record_payment_event_endpoint")
+        # return full trace in JSON for debugging (remove in production)
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
