@@ -47,7 +47,7 @@ async def create_deposit(deposit_data: DepositRequest):
             initiateHostedPayment(
                 paymentType: deposit
                 amount: $amount
-                currency: usd
+                currency: local_currency
                 countryCode: $countryCode
                 email: $email
                 redirectUrl: $redirectUrl
