@@ -127,7 +127,7 @@ async def create_deposit(deposit_data: DepositRequest):
                 "provider_response": cashramp_response
             })
         if hosted_link:
-             return {"hostedLink": hosted_link}
+            return {"hostedLink": hosted_link}
 
     except HTTPException:
         # Let FastAPI HTTPExceptions pass through unchanged
