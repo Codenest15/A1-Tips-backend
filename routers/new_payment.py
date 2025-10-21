@@ -15,7 +15,8 @@ router = APIRouter(prefix="/payments", tags=["Payment"])
 
 
 @router.post("/api/v1/create-deposit")
-async def create_deposit_endpoint(deposit_data: DepositRequest):  # use Pydantic model
+async def create_deposit_endpoint(deposit_data: DepositRequest):
+    print(f"Recording payment event for email: {email}, booking_id: {booking_id}, reference: {reference}")
     try:
 
         response = await create_deposit(deposit_data)
@@ -50,3 +51,4 @@ async def record_payment_event_endpoint(email: str, booking_id: str, reference: 
             status_code=500,
             content={"error": str(e)}
         )
+
