@@ -16,9 +16,7 @@ router = APIRouter(prefix="/payments", tags=["Payment"])
 
 @router.post("/api/v1/create-deposit")
 async def create_deposit_endpoint(deposit_data: DepositRequest):
-    print(f"Recording payment event for email: {email}, booking_id: {booking_id}, reference: {reference}")
     try:
-
         response = await create_deposit(deposit_data)
         return response
     except HTTPException as e:
@@ -38,5 +36,6 @@ async def create_deposit_endpoint(deposit_data: DepositRequest):
 async def record_payment_event_endpoint(response: dict):  # Adjust type as needed
     print("Received response:", response)
     return True 
+
 
 
