@@ -15,7 +15,7 @@ load_dotenv()
 # NOTE: Replace these with your actual details and store them in a .env file https://api.useaccrue.com/cashramp/api/graphql
 
 CASHRAMP_API_URL = os.getenv("CASHRAMP_API_URL", "https://api.useaccrue.com/cashramp/api/graphql")
-CASHRAMP_API_KEY = os.getenv("CASHRAMP_API_KEY", "CSHRMP-SECK_tZXqffHth67AqAL2") 
+CASHRAMP_API_KEY = os.getenv("CASHRAMP_API_KEY") 
 
 # This is the URL Cashramp will redirect the user to after a successful/failed payment
 SUCCESS_REDIRECT_URL = "https://www.a1-tips.com/" 
@@ -94,7 +94,7 @@ async def create_deposit(deposit_data: DepositRequest):
 
     try:
         # 2. Make the asynchronous API call to Cashramp using aiohttp
-        timeout = aiohttp.ClientTimeout(total=15)
+        timeout = aiohttp.ClientTimeout(total=150)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(CASHRAMP_API_URL, json=payload, headers=headers) as resp:
                 text = await resp.text()
