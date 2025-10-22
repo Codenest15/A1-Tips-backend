@@ -72,7 +72,7 @@ async def create_deposit(deposit_data: DepositRequest):
     }
     
     variables = {
-        "amount": deposit_data.vipamount/10.7,
+        "amount": deposit_data.vipamount,
         "countryCode": deposit_data.countryCode,
         "email": deposit_data.email,
         "firstName": deposit_data.firstName,  # <-- include
