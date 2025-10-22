@@ -18,7 +18,7 @@ CASHRAMP_API_URL = os.getenv("CASHRAMP_API_URL", "https://api.useaccrue.com/cash
 CASHRAMP_API_KEY = os.getenv("CASHRAMP_API_KEY", "CSHRMP-SECK_tZXqffHth67AqAL2") 
 
 # This is the URL Cashramp will redirect the user to after a successful/failed payment
-SUCCESS_REDIRECT_URL = "https://www.a1-tips.com/" 
+SUCCESS_REDIRECT_URL = "https://www.a1-tips.com/vip" 
 
 # Allowed currency enum values (update to match provider docs)
 ALLOWED_CURRENCIES = {"USD", "GHS", "NGN"}
