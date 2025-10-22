@@ -18,7 +18,7 @@ CASHRAMP_API_URL = os.getenv("CASHRAMP_API_URL", "https://api.useaccrue.com/cash
 CASHRAMP_API_KEY = os.getenv("CASHRAMP_API_KEY", "CSHRMP-SECK_tZXqffHth67AqAL2") 
 
 # This is the URL Cashramp will redirect the user to after a successful/failed payment
-SUCCESS_REDIRECT_URL = "https://www.a1-tips.com/vip" 
+SUCCESS_REDIRECT_URL = "https://www.a1-tips.com/" 
 
 # Allowed currency enum values (update to match provider docs)
 ALLOWED_CURRENCIES = {"USD", "GHS", "NGN"}
@@ -47,7 +47,7 @@ async def create_deposit(deposit_data: DepositRequest):
             initiateHostedPayment(
                 paymentType: deposit
                 amount: $amount
-                currency: local_currency
+                currency: usd
                 countryCode: $countryCode
                 email: $email
                 metadata: $metadata
@@ -72,7 +72,7 @@ async def create_deposit(deposit_data: DepositRequest):
     }
     
     variables = {
-        "amount": deposit_data.vipamount,
+        "amount": deposit_data.vipamount/10.7,
         "countryCode": deposit_data.countryCode,
         "email": deposit_data.email,
         "firstName": deposit_data.firstName,  # <-- include
