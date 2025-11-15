@@ -62,7 +62,7 @@ async def create_deposit(deposit_data: DepositRequest):
             }
         }
     """
-    
+    print(deposit_data)
     # Generate a unique reference ID for reconciliation
     reference_id = str(uuid.uuid4())
     metadata_payload = {
