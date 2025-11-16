@@ -120,6 +120,7 @@ async def record_payment_event(email: str, db: Session, booking_id, reference):
     tomorrow = today + timedelta(days=1)
     booking_id = booking_id.replace(" ", "")
 
+
     booking = (
         db.query(Booking)
         .filter(
@@ -129,6 +130,9 @@ async def record_payment_event(email: str, db: Session, booking_id, reference):
         )
         .first()
     )
+    existing_reference = db.query(Purchase).filter(
+                Purchase.reference == reference
+            ).first()
 
 
     # fallback: if booking_id is category name, uncomment below
@@ -137,7 +141,9 @@ async def record_payment_event(email: str, db: Session, booking_id, reference):
     #     func.date(Booking.created_at) == today
     # ).first()
 
-    print(email, booking_id, reference)
+    if existing_reference:
+        
+        return  HTTPException(status_code=404, detail="Payment reference already exists")
     if not booking:
         print("Booking not found")
         raise HTTPException(status_code=404, detail="Booking not found")
