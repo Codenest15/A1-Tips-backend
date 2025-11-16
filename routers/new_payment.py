@@ -45,9 +45,13 @@ async def record_payment_event_endpoint(response: dict,db: Session = Depends(get
     #    Use .get() with a default value of {} for safety when accessing nested objects
     reference = data.get("reference") 
     email = data.get("customer", {}).get("email")
-    booking_id = data.get("metadata", {}).get("game_type")  # Adjust key
+    booking_id = data.get("metadata", {}).get("game_type")
+    status = data.get("status") 
+    if status == "canceled":
+        return {"status":"canceled"} # Adjust key
     if not reference or not email or not booking_id:
         raise HTTPException(status_code=400, detail="Missing required payment event data")
+    
     try:
         await record_payment_event(email=email, db=db, booking_id=booking_id, reference=reference)
     except Exception as e:
