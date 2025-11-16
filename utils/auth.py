@@ -16,7 +16,6 @@ def login(db:Session,request:Login):
         else:
             user = db.query(models.User).filter(models.User.email == request.email_or_username).first()
     except Exception as e:
-        print(e)
         raise HTTPException(
             status_code=400, detail="User not found"
         )
