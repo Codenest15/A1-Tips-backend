@@ -39,6 +39,7 @@ async def create_deposit_endpoint(deposit_data: DepositRequest):  # use Pydantic
 @router.post("/api/v1/record-payment-event")
 async def record_payment_event_endpoint(response: dict,db: Session = Depends(get_db)):  # Adjust type as needed
     data = response.get("data", {})
+    print("Payment event data received:", data)
     
     # 2. Access the required fields from the 'data' object
     #    Use .get() with a default value of {} for safety when accessing nested objects
