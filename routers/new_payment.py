@@ -50,7 +50,7 @@ async def record_payment_event_endpoint(response: dict,db: Session = Depends(get
     if status == "canceled":
         return {"status":"canceled"}
     if status == "picked_up":
-        return {"status":"picked_up"# Adjust key
+        return {"status":"picked_up"}# Adjust key
     if not reference or not email or not booking_id:
         raise HTTPException(status_code=400, detail="Missing required payment event data")
     
@@ -61,5 +61,6 @@ async def record_payment_event_endpoint(response: dict,db: Session = Depends(get
         raise HTTPException(status_code=500, detail="Failed to record payment event")
     # Assuming response is available in this context
     return {"status": "success"}
+
 
 
