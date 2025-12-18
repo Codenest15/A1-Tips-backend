@@ -1,151 +1,118 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+# utils/new_payment.py
+
 import aiohttp
 import os
 import uuid
+import base64
+from fastapi import HTTPException
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
+load_dotenv()
 
-# Load environment variables (recommended practice)
-load_dotenv() 
+# --- Configuration ---
+MTN_URL = os.getenv("MTN_MOMO_URL")
+MTN_SUB_KEY = os.getenv("MTN_COLLECTION_SUB_KEY")
+MTN_USER = os.getenv("MTN_API_USER")
+MTN_KEY = os.getenv("MTN_API_KEY")
+MTN_ENV = os.getenv("MTN_TARGET_ENV", "sandbox")
 
-
-
-# --- Configuration (Use environment variables for security) ---
-# NOTE: Replace these with your actual details and store them in a .env file https://api.useaccrue.com/cashramp/api/graphql
-
-CASHRAMP_API_URL = os.getenv("CASHRAMP_API_URL", "https://api.useaccrue.com/cashramp/api/graphql")
-CASHRAMP_API_KEY = os.getenv("CASHRAMP_API_KEY") 
-
-# This is the URL Cashramp will redirect the user to after a successful/failed payment
-SUCCESS_REDIRECT_URL = "https://www.a1-tips.com/" 
-
-# Allowed currency enum values (update to match provider docs)
-ALLOWED_CURRENCIES = {"USD", "GHS", "NGN"}
-
-# Pydantic model for the data expected from the frontend
+# Updated Model: We need the Phone Number now!
 class DepositRequest(BaseModel):
     vipamount: float
-    countryCode: str
+    currency: str = "EUR" # Sandbox only supports EUR usually. Change to GHS/UGX in prod.
+    phoneNumber: str      # <--- REQUIRED for RequestToPay
     gameType: str
     email: str
-    firstName: str      # <-- added (required)
-    lastName: str       # <-- added (required)
+    firstName: str
+    lastName: str
 
-
-async def create_deposit(deposit_data: DepositRequest):
+async def get_momo_token():
+    """Helper to get the Bearer Token from MTN"""
+    url = f"{MTN_URL}/collection/token/"
     
-    # 1. Define the GraphQL Mutation and Variables
-    query = """
-        mutation InitiateHostedPayment(
-            $amount: Decimal!, $countryCode: String!,
-            $email: String!, 
-            $redirectUrl: String!, $reference: String!
-            $firstName: String!, $lastName: String!
-            $metadata: JSON! # <--- ADDED: Define metadata variable
-        ) {
-            initiateHostedPayment(
-                paymentType: deposit
-                amount: $amount
-                currency: usd
-                countryCode: $countryCode
-                email: $email
-                metadata: $metadata
-                redirectUrl: $redirectUrl
-                reference: $reference
-                firstName: $firstName
-                lastName: $lastName
-            ) {
-                id
-                hostedLink
-                status
-            }
-        }
-    """
-    print(deposit_data)
-    # Generate a unique reference ID for reconciliation
-    reference_id = str(uuid.uuid4())
-    metadata_payload = {
-        "game_type": deposit_data.gameType
-        
-        # 'reference' is already sent, but you can duplicate it here if needed
-    }
-    
-    variables = {
-        "amount": deposit_data.vipamount/10.7,
-        "countryCode": deposit_data.countryCode,
-        "email": deposit_data.email,
-        "firstName": deposit_data.firstName,  # <-- include
-        "lastName": deposit_data.lastName,    # <-- include
-        "redirectUrl": SUCCESS_REDIRECT_URL,
-        "reference": reference_id,
-        "metadata": metadata_payload,  # <--- ADDED: Pass metadata
-    }
+    # Create Basic Auth String (User:Key)
+    creds = f"{MTN_USER}:{MTN_KEY}"
+    encoded_creds = base64.b64encode(creds.encode()).decode()
     
     headers = {
-        "Authorization": f"Bearer {CASHRAMP_API_KEY}",
-        "Content-Type": "application/json",
+        "Authorization": f"Basic {encoded_creds}",
+        "Ocp-Apim-Subscription-Key": MTN_SUB_KEY
     }
     
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers) as resp:
+            print(f"MTN Token Response Status: {resp.status} error: {resp}")
+            if resp.status != 200:
+                raise HTTPException(status_code=500, detail="Failed to get MTN Token")
+            data = await resp.json()
+            return data.get("access_token")
+
+async def create_deposit(deposit_data: DepositRequest):
+    """
+    Initiates the RequestToPay (Push Notification to User)
+    """
+    token = await get_momo_token()
+    reference_id = str(uuid.uuid4()) # Essential for MTN tracking
+
+    # API Endpoint
+    url = f"{MTN_URL}/collection/v1_0/requesttopay"
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "X-Reference-Id": reference_id,
+        "X-Target-Environment": MTN_ENV,
+        "Ocp-Apim-Subscription-Key": MTN_SUB_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    # Calculate amount (Preserving your logic)
+    final_amount = f"{deposit_data.vipamount / 10.7:.2f}"
+
     payload = {
-        "query": query,
-        "variables": variables,
+        "amount": final_amount,
+        "currency": "EUR",
+        "externalId": deposit_data.gameType, # Use this to track what they are buying
+        "payer": {
+            "partyIdType": "MSISDN",
+            "partyId": deposit_data.phoneNumber # Format: 233xxxxxxxxx (No +)
+        },
+        "payerMessage": f"Pay for {deposit_data.gameType}",
+        "payeeNote": f"Customer {deposit_data.email}"
     }
 
     try:
-        # 2. Make the asynchronous API call to Cashramp using aiohttp
-        timeout = aiohttp.ClientTimeout(total=150)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(CASHRAMP_API_URL, json=payload, headers=headers) as resp:
-                text = await resp.text()
-                status = resp.status
-                try:
-                    cashramp_response = await resp.json()
-                except Exception:
-                    cashramp_response = None
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as resp:
+                # MTN returns 202 Accepted if successful (it's pending user action)
+                if resp.status == 202:
+                    return {
+                        "status": "PENDING",
+                        "message": "Payment prompt sent to user phone",
+                        "referenceId": reference_id # Frontend needs this to check status!
+                    }
+                else:
+                    text = await resp.text()
+                    raise HTTPException(status_code=resp.status, detail=f"MTN Error: {text}")
 
-        if status >= 400:
-            raise HTTPException(status_code=502, detail=f"Payment provider returned status {status}")
-
-        # 3. Check for GraphQL errors
-        if not cashramp_response:
-            raise HTTPException(status_code=502, detail="Payment provider returned non-json response")
-
-        if 'errors' in cashramp_response:
-            # Propagate provider errors back to the caller so they can be inspected
-            raise HTTPException(status_code=400, detail=cashramp_response['errors'])
-
-        # 4. Debug: log full provider response (helps when hostedLink is missing)
-
-        # Extract and return the hosted link
-        hosted_obj = cashramp_response.get('data', {}).get('initiateHostedPayment') if isinstance(cashramp_response, dict) else None
-        hosted_link = None
-        if hosted_obj and isinstance(hosted_obj, dict):
-            hosted_link = hosted_obj.get('hostedLink')
-
-        if not hosted_link:
-            # Return provider response to caller for debugging (don't leak secrets in production)
-            raise HTTPException(status_code=502, detail={
-                "message": "Cashramp did not return a hostedLink",
-                "provider_response": cashramp_response
-            })
-        if hosted_link:
-            return {"hostedLink": hosted_link}
-
-    except HTTPException:
-        # Let FastAPI HTTPExceptions pass through unchanged
-        raise
-
-    except aiohttp.ClientConnectorError as e:
-        import traceback
-        tb = traceback.format_exc()
-        raise HTTPException(status_code=502, detail=f"Network error: {e}")
-    except aiohttp.ClientResponseError as e:
-        raise HTTPException(status_code=502, detail=f"Payment provider returned error: {e}")
     except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
-        raise HTTPException(status_code=500, detail=f"{e.__class__.__name__}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
+async def check_transaction_status(reference_id: str):
+    """
+    Checks if the user has entered their PIN
+    """
+    token = await get_momo_token()
+    url = f"{MTN_URL}/collection/v1_0/requesttopay/{reference_id}"
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "X-Target-Environment": MTN_ENV,
+        "Ocp-Apim-Subscription-Key": MTN_SUB_KEY
+    }
 
-
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as resp:
+            if resp.status == 200:
+                return await resp.json() # Returns status: SUCCESSFUL, FAILED, or PENDING
+            raise HTTPException(status_code=resp.status, detail="Could not fetch status")
