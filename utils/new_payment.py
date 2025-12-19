@@ -4,9 +4,13 @@ import aiohttp
 import os
 import uuid
 import base64
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from .payment import record_payment_event
+from database import get_db
+from sqlalchemy.orm import Session
+
 
 load_dotenv()
 
@@ -42,13 +46,14 @@ async def get_momo_token():
     
     async with aiohttp.ClientSession() as session:
         async with session.post(url, headers=headers) as resp:
-            print(f"MTN Token Response Status: {resp.status} error: {resp}")
+            
             if resp.status != 200:
                 raise HTTPException(status_code=500, detail="Failed to get MTN Token")
             data = await resp.json()
             return data.get("access_token")
 
 async def create_deposit(deposit_data: DepositRequest):
+    print(deposit_data)
     """
     Initiates the RequestToPay (Push Notification to User)
     """
@@ -67,10 +72,10 @@ async def create_deposit(deposit_data: DepositRequest):
     }
     
     # Calculate amount (Preserving your logic)
-    final_amount = f"{deposit_data.vipamount / 10.7:.2f}"
+    # final_amount = f"{deposit_data.vipamount / 10.7:.2f}"
 
     payload = {
-        "amount": final_amount,
+        "amount": deposit_data.vipamount,
         "currency": "EUR",
         "externalId": deposit_data.gameType, # Use this to track what they are buying
         "payer": {
@@ -78,7 +83,7 @@ async def create_deposit(deposit_data: DepositRequest):
             "partyId": deposit_data.phoneNumber # Format: 233xxxxxxxxx (No +)
         },
         "payerMessage": f"Pay for {deposit_data.gameType}",
-        "payeeNote": f"Customer {deposit_data.email}"
+        "payeeNote": f"{deposit_data.email}"
     }
 
     try:
@@ -98,7 +103,7 @@ async def create_deposit(deposit_data: DepositRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-async def check_transaction_status(reference_id: str):
+async def check_transaction_status(reference_id: str, db: Session):
     """
     Checks if the user has entered their PIN
     """
@@ -114,5 +119,19 @@ async def check_transaction_status(reference_id: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as resp:
             if resp.status == 200:
-                return await resp.json() # Returns status: SUCCESSFUL, FAILED, or PENDING
+                response_data = await resp.json()
+                if response_data.get("status") == "PENDING":
+                    return {"status":"PENDING"}
+                elif response_data.get("status") == "SUCCESSFUL":
+
+                    await record_payment_event(
+                        response_data.get("payeeNote"),
+                        db,
+                        response_data.get("externalId"),
+                        reference_id
+                    )
+                    return {"status":"SUCCESSFUL"}
+                elif response_data.get("status") == "FAILED":
+                    return {"status":"FAILED"}
+                # Returns status: SUCCESSFUL, FAILED, or PENDING
             raise HTTPException(status_code=resp.status, detail="Could not fetch status")
