@@ -1,14 +1,29 @@
 from curl_cffi import requests
+from curl_cffi.requests.errors import RequestsError
 from datetime import datetime
+import time
 
 def get_booking(code: str):
-    url = f"https://www.sportybet.com/api/gh/orders/share/{code}?_t=1757526666143"
+    # Dynamically generate the timestamp to bypass stale request checks
+    current_timestamp = int(time.time() * 1000)
+    url = f"https://www.sportybet.com/api/gh/orders/share/{code}?_t={current_timestamp}"
     
     try:
-        # The 'impersonate' flag perfectly mimics Chrome's TLS fingerprint
         res = requests.get(url, impersonate="chrome110")
         res.raise_for_status()
-        data = res.json().get("data", {})
+        
+        # Safely attempt to parse the JSON
+        try:
+            json_response = res.json()
+        except ValueError:
+            # If JSON parsing fails, the server likely returned an anti-bot HTML page
+            return {"error": f"Server blocked the request. Returned non-JSON content: {res.text[:150]}..."}
+
+        data = json_response.get("data", {})
+        
+        # Check if data actually exists before trying to access 'deadline'
+        if not data:
+             return {"error": "No data found in the response."}
 
         # Format deadline from ms timestamp to ISO string
         deadline = datetime.utcfromtimestamp(data["deadline"] / 1000).strftime("%Y-%m-%dT%H:%M:%S")
@@ -50,20 +65,25 @@ def get_booking(code: str):
             final_prediction = " & ".join(prediction_parts) if prediction_parts else "Unknown"
 
             games.append({
-                "home": outcome["homeTeamName"],
-                "away": outcome["awayTeamName"],
+                "home": outcome.get("homeTeamName", "Unknown"),
+                "away": outcome.get("awayTeamName", "Unknown"),
                 "prediction": final_prediction,
                 "odd": odd,
-                "sport": outcome["sport"]["name"],
-                "tournament": outcome["sport"]["category"]["tournament"]["name"]
+                "sport": outcome.get("sport", {}).get("name", "Unknown"),
+                "tournament": outcome.get("sport", {}).get("category", {}).get("tournament", {}).get("name", "Unknown")
             })
 
         return {
             "deadline": deadline,
-            "shareCode": data["shareCode"],
-            "shareURL": data["shareURL"],
+            "shareCode": data.get("shareCode"),
+            "shareURL": data.get("shareURL"),
             "games": games
         }
 
-    except requests.RequestException as e:
-        return {"error": f"Request failed: {e}"}
+    # Catch the correct curl_cffi networking errors
+    except RequestsError as e:
+        return {"error": f"Network request failed: {e}"}
+    
+    # Catch any other unexpected python errors
+    except Exception as e:
+        return {"error": f"An unexpected error occurred: {e}"}
