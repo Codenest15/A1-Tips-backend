@@ -7,9 +7,13 @@ def get_booking(code: str):
     # Dynamically generate the timestamp to bypass stale request checks
     current_timestamp = int(time.time() * 1000)
     url = f"https://www.sportybet.com/api/gh/orders/share/{code}?_t={current_timestamp}"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Content-Type": "application/json"
+    }
     
     try:
-        res = requests.get(url, impersonate="chrome110")
+        res = requests.get(url,headers=headers, impersonate="chrome110")
         res.raise_for_status()
         
         # Safely attempt to parse the JSON
