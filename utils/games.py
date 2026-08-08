@@ -179,7 +179,12 @@ def view_vip_booking(share_code: str, db: Session):
 
 
 def all_bookings(db: Session):
-    bookings = db.query(Booking).order_by(Booking.created_at.desc()).all()
+    bookings = (
+        db.query(Booking)
+        .order_by(Booking.created_at.desc())
+        .limit(50)
+        .all()
+    )
     result = []
     for booking in bookings:
         games = db.query(Game).filter(Game.booking_id == booking.id).all()
